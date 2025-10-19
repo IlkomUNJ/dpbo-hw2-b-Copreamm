@@ -253,7 +253,7 @@ void Seller::handleStoreCapabilitiesMenu() {
                 break;
             case 6:
                 cout << "Back to Main Menu. \n\n";
-                break;
+                return;
             default:
                 cout << "Invalid choice. Please try again.\n\n";
                 break;

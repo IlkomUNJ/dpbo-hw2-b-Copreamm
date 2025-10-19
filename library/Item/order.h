@@ -36,32 +36,14 @@ public:
     
     chrono::system_clock::time_point getCreationTime() const { return creationTime; }
 
+    void setCreationTime(std::chrono::system_clock::time_point time);
+
     void addItem(const Item& item) {
         items.push_back(item);
         totalAmount += item.getQuantity() * item.getPrice();
     }
 
-    string toCSV() const {
-        auto timestamp = creationTime.time_since_epoch().count();
-
-        stringstream items_ss;
-        for (size_t i = 0; i < items.size(); ++i) {
-            string itemStr = items[i].toCSV();
-            std::replace(itemStr.begin(), itemStr.end(), ',', ';'); 
-            
-            items_ss << itemStr;
-            if (i < items.size() - 1) {
-                items_ss << "|";
-            }
-        }
-        string itemListString = items_ss.str();
-
-        stringstream ss;
-        ss << orderId << "," << buyerName << "," << sellerStoreName << "," 
-            << totalAmount << "," << status << "," 
-            << itemListString << "," << timestamp;
-         return ss.str();
-    }
+    string toCSV() const;
 
     int getOrderId() const { return orderId; }
     const string& getBuyerName() const { return buyerName; }

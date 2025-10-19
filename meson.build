@@ -46,6 +46,15 @@ app_sources = [
 
 executable('system-transaction',
     app_sources,
+
+    include_directories : [
+        '.', # Direktori root (untuk main.cpp)
+        'library/User',
+        'library/Item',
+        'library/Serialization',
+        'library/Bank'  # <-- WAJIB: Memungkinkan compiler menemukan bank_transaction.h
+    ],
+    
     # Example dependencies:
     # dependencies: [fmt_dep],
     install: true

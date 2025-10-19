@@ -5,10 +5,16 @@
 #include <iomanip>
 #include <chrono>
 #include <cmath>
+#include <ctime>
 
 #include "./bank_customer.h"
 #include "../User/user.h"
+#include "../Item/order.h"
+#include "../Serialization/serialization.h"
 
+extern std::vector<Order> orders;
+extern void loadOrders(std::vector<Order>&);
+extern void saveTransaction(const BankTransaction& t, const std::string& filename);
 using namespace std;
 
 shared_ptr<BankCustomer> BankCustomer::fromCSV(const vector<string>& tokens) {
@@ -37,32 +43,64 @@ void BankCustomer::addBalance(double amount) {
     }
     balance += amount;
     cout << "Deposited: Rp" << amount << "\n\n";
+    
+    BankTransaction t;
+    t.timestamp = std::chrono::system_clock::now();
+    t.accountId = this->id;
+    t.type = "DEPOSIT";
+    t.amount = amount;
+    t.description = "Self-Deposit via ATM/Menu";
+
+    saveTransaction(t, "transactions.csv");
 }
 
-bool BankCustomer::withdraw(double amount) { 
-    if (amount <= 0) {
-        return withdrawBalance(amount); 
+bool BankCustomer::withdraw(double amount, const std::string& description) {
+    if (amount <= 0 || balance < amount) {
+        return false;
     }
-    return withdrawBalance(amount); 
-}
+    
+    balance -= amount;
 
-bool BankCustomer::withdrawBalance(double amount) {
-    if(amount <= 0) {
-        cout << "Invalid amount. Withdrawal failed.\n\n";
-        return false;
-    }
-    if(balance >= amount) {
-        balance -= amount;
-        cout << "Withdrawal Sucessful: - Rp" << amount << "\n\n";
-        return true;
-    } else {
-        cout << "Insufficient balance. Withdrawal failed.\n\n";
-        return false;
-    }
+    BankTransaction t;
+    t.timestamp = std::chrono::system_clock::now();
+    t.accountId = this->id;
+    t.type = "WITHDRAW";
+    t.amount = amount;
+    t.description = description;
+
+    saveTransaction(t, "transactions.csv");
+    
+    return true;
 }
 
 void BankCustomer::showTransactionHistory() const {
-    cout << "-> Checking transaction history for " << name << "...\n";
+    loadOrders(orders); 
+    
+    cout << "\n--- Transaction History for Account ID: " << id << " (" << name << ") ---\n";
+    cout << "Type       | Date & Time          | Amount (Rp) | Description\n";
+    cout << "-----------------------------------------------------------------------\n";
+
+    bool found = false;
+    
+    for (const auto& order : orders) {
+        if (order.getBuyerName() == name && order.getStatus() == "DONE") {
+            found = true;
+            
+            time_t timeT = std::chrono::system_clock::to_time_t(order.getCreationTime());
+            tm* ltm = localtime(&timeT);
+            
+            cout << left << setw(10) << "WITHDRAWAL" 
+                 << " | " << put_time(ltm, "%Y-%m-%d %H:%M:%S") 
+                 << " | " << fixed << setprecision(2) << setw(11) << order.getTotalAmount()
+                 << " | Purchase from " << order.getSellerStoreName()
+                 << " (Order ID: " << order.getOrderId() << ")\n";
+        }
+    }
+
+    if (!found) {
+        cout << "No completed purchase transactions found.\n";
+    }
+    cout << "\n";
 }
 
 void BankCustomer::printInfo() const {
@@ -76,13 +114,21 @@ double BankCustomer::calculateCashFlow(int days) const {
 
     auto timeLimitDuration = chrono::hours(days * 24); 
     auto now = chrono::system_clock::now();
-    auto timeLimit = now - timeLimitDuration; 
+    auto timeLimit = now - timeLimitDuration;
 
-    for (const auto& tx : transactionHistory) {
+    std::vector<BankTransaction> allTransactions = 
+        BankTransaction::loadFromFile("nama_file_transaksi.csv");
+
+    int currentId = this->id;
+    for (const auto& tx : allTransactions) {
+        if (tx.accountId != currentId) {
+            continue;
+        }
+
         if (tx.timestamp >= timeLimit) {
-            if (tx.type == "Credit") {
+            if (tx.type == "Deposit" || tx.type == "CREDIT") {
                 netFlow += tx.amount;
-            } else if (tx.type == "Debit") {
+            } else if (tx.type == "Withdrawal" || tx.type == "DEBIT") {
                 netFlow -= tx.amount;
             }
         }
@@ -112,7 +158,7 @@ void BankCustomer::handleBankingFunctions() {
             continue;
         }
 
-        if (choice < 1 || choice > 5) {
+        if (choice < 1 || choice > 6) {
             cout << "Invalid Input\n";
             continue;
         }
@@ -138,7 +184,11 @@ void BankCustomer::handleBankingFunctions() {
             case WITHDRAW:
                 cout << "Enter withdraw amount: ";
                 if (cin >> amount) {
-                    this->withdrawBalance(amount);
+                    if (this->withdraw(amount, "Manual Withdrawal from ATM/Menu")) { 
+                        cout << "Withdrawal successful: Rp" << amount << "\n\n";
+                    } else {
+                        cout << "Withdrawal failed: Insufficient funds or invalid amount.\n\n";
+                    }
                 } else {
                     cin.clear(); cin.ignore(numeric_limits<streamsize>::max(), '\n');
                     cout << "Invalid amount input.\n\n";

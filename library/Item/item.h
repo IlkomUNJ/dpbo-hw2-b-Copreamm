@@ -12,10 +12,11 @@ using namespace std;
 class Item {
 private:
     int id;
-    std::string name;
+    string name;
     int quantity;
     double price;
     bool idDisplay;
+    string sellerStoreName;
 
 public:
     Item(int id, const std::string& name, int quantity, double price)
@@ -28,6 +29,11 @@ public:
         ss << id << "," << name << "," << quantity << "," << fixed << setprecision(2) << price;
         return ss.str();
     }
+
+    Item(const std::string& name, double price, int quantity, [[maybe_unused]] const std::string& sellerStoreName)
+        : id(0), name(name), quantity(quantity), price(price), sellerStoreName(sellerStoreName) {
+             idDisplay = false; 
+        }
 
     static shared_ptr<Item> fromCSV(const vector<string>& tokens);
 

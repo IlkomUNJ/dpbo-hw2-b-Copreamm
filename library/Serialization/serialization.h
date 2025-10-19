@@ -5,6 +5,8 @@
 #include <memory>
 #include <string>
 
+#include "bank_transaction.h"
+
 using namespace std;
 
 class User;
@@ -15,5 +17,7 @@ void saveAllData(const vector<shared_ptr<User>>& users,
 
 void loadAllData(vector<shared_ptr<User>>& users, 
                  vector<Order>& orders);
+
+void saveTransaction(const BankTransaction& t, const string& filename);
 
 #endif // SERIALIZATION_H

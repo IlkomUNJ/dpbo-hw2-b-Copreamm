@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <vector>
 #include <string>
+#include <chrono>
 
 #include "./order.h"
 
@@ -13,55 +14,64 @@ void Order::setTotalAmount(double totalAmount) {
     this->totalAmount = totalAmount; 
 }
 
+void Order::setCreationTime(std::chrono::system_clock::time_point time) {
+    creationTime = time;
+}
+
 Order Order::fromCSV(const vector<string>& tokens) {
-    if (tokens.size() < 7) {
-        return Order(0, "INVALID_BUYER", "INVALID_STORE");
+    int id = stoi(tokens[0]);
+    string buyer = tokens[1];
+    string seller = tokens[2];
+    double total = stod(tokens[3]);
+    string statusStr = tokens[4];
+
+    chrono::system_clock::time_point loadedTime;
+
+    if (tokens.size() > 5) {
+        try {
+            long long timestamp = stoll(tokens[5]);
+            loadedTime = chrono::system_clock::from_time_t(timestamp);
+        } catch (const exception& e) {
+        }
     }
     
-    try {
-        int id = stoi(tokens[0]);
-        string buyer = tokens[1];
-        string sellerStore = tokens[2];
-        double total = stod(tokens[3]);
-        string stat = tokens[4];
-        string itemListString = tokens[5];
-        long long timestamp_ll = stoll(tokens[6]);
+    Order loadedOrder(id, buyer, seller);
+    
+    loadedOrder.setTotalAmount(total);
+    loadedOrder.setStatus(statusStr);
+    loadedOrder.setCreationTime(loadedTime);
 
-        chrono::system_clock::time_point time;
-        time += chrono::milliseconds(timestamp_ll);
-
-        vector<Item> itemList;
-        stringstream ss_items(itemListString);
-        string item_segment;
+    for (size_t i = 6; i < tokens.size(); i += 3) {
+    if (i + 2 < tokens.size()) {
+        string itemName = tokens[i];
+        int quantity = stoi(tokens[i+1]);
+        double price = stod(tokens[i+2]);
         
-        // Item segments are separated by '|'
-        while (getline(ss_items, item_segment, '|')) {
-            stringstream ss_item_data(item_segment);
-            string item_token;
-            vector<string> item_tokens;
-
-            // Item data fields are separated by ';'
-            while (getline(ss_item_data, item_token, ';')) {
-                item_tokens.push_back(item_token);
-            }
-
-            // Item must have 4 tokens: id, name, quantity, price
-            if (item_tokens.size() >= 4) {
-                try {
-                    int itemId = stoi(item_tokens[0]);
-                    string itemName = item_tokens[1];
-                    int itemQty = stoi(item_tokens[2]);
-                    double itemPrice = stod(item_tokens[3]);
-                    
-                    itemList.emplace_back(itemId, itemName, itemQty, itemPrice);
-                } catch (...) {
-                    // Skip malformed item
-                }
-            }
-        }
+        Item item(itemName, price, quantity, loadedOrder.getSellerStoreName());
         
-        return Order(id, buyer, sellerStore, total, stat, itemList, time);
-    } catch (const exception& e) {
-        return Order(0, "CRITICAL_ERROR", "CRITICAL_ERROR_STORE");
+        loadedOrder.addItem(item); 
     }
+}
+
+    return loadedOrder;
+}
+
+string Order::toCSV() const {
+    auto timestamp = chrono::system_clock::to_time_t(creationTime); 
+    
+    stringstream ss;
+    
+    ss << orderId << "," 
+       << buyerName << "," 
+       << sellerStoreName << "," 
+       << totalAmount << "," 
+       << status 
+       << "," << timestamp;
+    
+    for (const auto& item : items) {
+        ss << ";" << item.getId() << "," << item.getName() << "," 
+           << item.getQuantity() << "," << item.getPrice(); 
+    }
+    
+    return ss.str();
 }

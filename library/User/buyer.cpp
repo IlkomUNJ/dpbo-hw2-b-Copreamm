@@ -25,7 +25,7 @@ Buyer::Buyer(const string& name, const string& password)
 
 bool Buyer::withdraw(double amount) {
     if (this->account) {
-        return this->account->withdraw(amount); 
+        return this->account->withdraw(amount, "E-Commerce Purchase"); 
     }
     return false;
 }
@@ -365,7 +365,7 @@ void Buyer::viewMyOrderHistory() const {
                 cout << "Item Details:\n";
                 for (const auto& item : order.getItems()) {
                     cout << "  - " << item.getName() << " x " << item.getQuantity() 
-                         << " (@Rp" << fixed << setprecision(2) << item.getPrice() << ")\n";
+                         << " (Rp" << fixed << setprecision(2) << item.getPrice() << ")\n";
                 }
                 cout << "\n";
             }

@@ -6,6 +6,10 @@
 #include <ctime>
 #include <iomanip>
 
+#if !defined(_WIN32) && !defined(__APPLE__)
+    #define _XOPEN_SOURCE
+#endif
+
 #include "serialization.h"
 #include "../User/user.h"     
 #include "../User/buyer.h"    
@@ -36,6 +40,74 @@ vector<string> split(const string& s, char delimiter) {
         tokens.push_back(token);
     }
     return tokens;
+}
+
+string timePointToISOString(const chrono::system_clock::time_point& tp) {
+    time_t timeT = chrono::system_clock::to_time_t(tp);
+    tm* gmtm = gmtime(&timeT); 
+    
+    if (gmtm == nullptr) return "UnknownTime";
+
+    stringstream ss;
+    ss << put_time(gmtm, "%Y-%m-%d %H:%M:%S"); 
+    return ss.str();
+}
+
+chrono::system_clock::time_point parseISOString(const string& isoString) {
+    tm t{}; 
+    istringstream ss(isoString);
+    if (!(ss >> get_time(&t, "%Y-%m-%d %H:%M:%S"))) {
+        return chrono::system_clock::time_point{}; 
+    }
+    
+    time_t tt = static_cast<time_t>(-1);
+
+    #if defined(_WIN32)
+        t.tm_isdst = 0; 
+        time_t local_time = mktime(&t);
+
+        if (local_time != static_cast<time_t>(-1)) {
+             extern long _timezone;
+             tt = local_time - _timezone;
+        } else {
+             tt = static_cast<time_t>(-1);
+        }
+    #endif
+
+    if (tt == static_cast<time_t>(-1)) { 
+        return chrono::system_clock::time_point{};
+    }
+
+    return chrono::system_clock::from_time_t(tt);
+}
+
+string BankTransaction::toCSV() const {
+    stringstream ss;
+    ss << accountId << ",";
+    ss << timePointToISOString(timestamp) << ",";
+    ss << type << ",";
+    ss << fixed << setprecision(2) << amount << ",";
+    
+    string safeDescription = description;
+    replace(safeDescription.begin(), safeDescription.end(), ',', ';');
+    ss << safeDescription;
+    
+    return ss.str();
+}
+
+BankTransaction BankTransaction::fromCSV(const vector<string>& tokens) {
+    BankTransaction t;
+    if (tokens.size() < 5) return t;
+    
+    try {
+        t.accountId = stoi(tokens[0]);
+        t.timestamp = parseISOString(tokens[1]);
+        t.type = tokens[2];
+        t.amount = stod(tokens[3]);
+        t.description = tokens[4];
+    } catch (...) {
+    }
+    return t;
 }
 
 // Deklarasi Fungsi Save
@@ -102,6 +174,16 @@ void saveOrders(const vector<Order>& orders) {
         ofs << order.toCSV() << "\n";
     }
     ofs.close();
+}
+
+void saveTransaction(const BankTransaction& t, const string& filename) {
+    ofstream file(filename, ios::app); 
+    if (file.is_open()) {
+        file << t.toCSV() << "\n"; 
+        file.close();
+    } else {
+        cerr << "ERROR: Could not open " << filename << " for saving transaction.\n";
+    }
 }
 
 // Deklarasi Fungsi Load Internal
@@ -222,25 +304,52 @@ void loadInventory(vector<shared_ptr<User>>& users) {
 }
 
 // Orders
-void loadOrders(std::vector<Order>& orders) {
+void loadOrders(vector<Order>& orders) {
     orders.clear();
 
-    std::ifstream file(ORDERS_FILE); 
+    ifstream file(ORDERS_FILE); 
 
     if (!file.is_open()) {
-        std::cerr << "Warning: Could not open " << ORDERS_FILE << " for reading. Orders list is empty.\n";
+        cerr << "Warning: Could not open " << ORDERS_FILE << " for reading. Orders list is empty.\n";
         return;
     }
 
-    std::string line;
-    while (std::getline(file, line)) {
+    string line;
+    while (getline(file, line)) {
         if (line.empty()) continue;
         
-        std::vector<std::string> tokens = split(line, ',');
+        vector<string> tokens = split(line, ',');
         
         if (!tokens.empty()) {
             orders.push_back(Order::fromCSV(tokens)); 
         }
     }
     file.close();
+}
+
+std::vector<BankTransaction> BankTransaction::loadFromFile(const std::string& filename) {
+    std::vector<BankTransaction> transactions;
+    std::ifstream file(filename);
+    std::string line;
+
+    if (!file.is_open()) {
+        return transactions;
+    }
+
+    while (std::getline(file, line)) {
+        if (line.empty()) continue;
+
+        // Asumsi fungsi split() sudah didefinisikan dan terlihat di scope ini
+        std::vector<std::string> tokens = split(line, ',');
+        
+        if (tokens.size() >= 5) {
+            BankTransaction t = BankTransaction::fromCSV(tokens);
+            if (t.accountId > 0) {
+                 transactions.push_back(t);
+            }
+        }
+    }
+
+    file.close();
+    return transactions;
 }

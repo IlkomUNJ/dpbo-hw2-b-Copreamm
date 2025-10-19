@@ -46,7 +46,7 @@ public:
         lastTransactionTime = chrono::system_clock::now();
     }
 
-    bool withdraw(double amount);
+    bool withdraw(double amount, const std::string& description);
 
     void recordTransaction(double amount, const string& type);
 
