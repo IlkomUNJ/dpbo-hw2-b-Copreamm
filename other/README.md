@@ -15,7 +15,7 @@ NIM : 1313624049
 
 1. Store Capabilities (Transactions of the latest k days, Paid transaction, Most m frequent item transactions, Most active buyer counted by number of transactions per day, Most active sellers counted by number of transactions per day)
 2. Bank (All transaction within a week starting, List all bank customers, List all dormant accounts, List n top users that conduct most transaction for today.)
-3. Buyer (Create banking account, Topup, Withdraw, List Cash Flow, Register and login to the store, Purchase Item, List all orders)
+3. Buyer (Create banking account, Topup, Withdraw, List Cash Flow, Register and login to the store, Purchase Item, List all orders, and Check spending the last k days)
 4. Seller (All buyer features including, Register new item, Replenished, Discarded, Set Item Price)
 
 # Collaborators (The person you learned from)

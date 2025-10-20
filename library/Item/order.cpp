@@ -4,17 +4,28 @@
 #include <stdexcept>
 #include <vector>
 #include <string>
+#include <ctime>
 #include <chrono>
+#include <iomanip>
 
 #include "./order.h"
 
 using namespace std;
 
+std::string Order::getFormattedCreationTime() const {
+    std::time_t tt = std::chrono::system_clock::to_time_t(creationTime);
+    std::tm tm_local = *std::localtime(&tt);
+    std::stringstream ss;
+    ss << std::put_time(&tm_local, "%Y-%m-%d %H:%M:%S");
+    
+    return ss.str();
+}
+
 void Order::setTotalAmount(double totalAmount) {
     this->totalAmount = totalAmount; 
 }
 
-void Order::setCreationTime(std::chrono::system_clock::time_point time) {
+void Order::setCreationTime(chrono::system_clock::time_point time) {
     creationTime = time;
 }
 

@@ -36,7 +36,9 @@ public:
     
     chrono::system_clock::time_point getCreationTime() const { return creationTime; }
 
-    void setCreationTime(std::chrono::system_clock::time_point time);
+    void setCreationTime(chrono::system_clock::time_point time);
+
+    string getFormattedCreationTime() const;
 
     void addItem(const Item& item) {
         items.push_back(item);

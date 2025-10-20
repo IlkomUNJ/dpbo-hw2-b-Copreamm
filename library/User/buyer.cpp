@@ -151,7 +151,7 @@ void Buyer::purchaseItem(
 		return;
 	}
 
-	double totalCost = itemData.price * purchaseQty;
+    double totalCost = itemData.price * purchaseQty; 
 	
 	int newOrderId = 10000 + (chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch()).count() % 9999);
 	
@@ -211,6 +211,34 @@ void Buyer::purchaseItem(
 	updateInventoryCSV(currentInventory, inventoryFile);
 	
 	cout << "Transaction recorded with DONE status.\n\n";
+}
+
+double Buyer::calculateSpendingLastKDays(int days) const {
+    double totalSpending = 0.0;
+    
+    using namespace std::chrono;
+    auto timeLimitDuration = hours(static_cast<long long>(days) * 24); 
+    auto now = system_clock::now();
+    auto timeLimit = now - timeLimitDuration;
+
+    loadOrders(orders); 
+    const vector<Order>& allOrders = orders;
+    
+    for (const auto& order : allOrders) {
+        if (order.getBuyerName() != this->getName()) {
+            continue;
+        }
+
+        if (order.getStatus() != "DONE") {
+            continue;
+        }
+
+        if (order.getCreationTime() >= timeLimit) {
+            totalSpending += order.getTotalAmount();
+        }
+    }
+    
+    return totalSpending;
 }
 
 void Buyer::handleBrowseStore() {
@@ -323,7 +351,8 @@ void Buyer::handleOrderFunctionality() {
     do {
         cout << "\n=== MENU ORDER FUNCTIONALITY ===\n";
         cout << "1. View My Order History\n";
-        cout << "2. Back to Main Menu\n";
+		cout << "2. View Spending Last K Days\n";
+        cout << "3. Back to Main Menu\n";
         cout << "Select option: ";
         
         if (!(cin >> choice)) {
@@ -337,8 +366,11 @@ void Buyer::handleOrderFunctionality() {
                 viewMyOrderHistory();
                 break;
             case 2:
-                cout << "Returning.\n";
-                return;
+                handleSpendingReport();
+                break;
+			case 3:
+				cout << "Back to main menu. \n";
+				return;
             default:
                 cout << "Invalid choice.\n";
                 break;
@@ -357,17 +389,27 @@ void Buyer::viewMyOrderHistory() const {
         for (const auto& order : allOrders) {
             if (order.getBuyerName() == this->getName()) {
                 found = true;
-                cout << "\nOrder ID: " << order.getOrderId() << "\n";
+
+                double calculatedTotal = 0.0; 
+
+                cout << "\n---------------------------------------------------\n";
+                cout << "Order ID: " << order.getOrderId() << "\n";
                 cout << "Seller: " << order.getSellerStoreName() << "\n";
                 cout << "Status: " << order.getStatus() << "\n";
-                cout << "Total Cost: Rp" << fixed << setprecision(2) << order.getTotalAmount() << "\n";
+                cout << "Creation Time: " << order.getFormattedCreationTime() << "\n"; 
+
+                cout << "\nItem Details:\n";
+                cout << setw(35) << left << "  - Item" << setw(10) << "Qty" << setw(15) << "Subtotal (Rp)\n";
+                cout << "  ---------------------------------------------------\n";
                 
-                cout << "Item Details:\n";
                 for (const auto& item : order.getItems()) {
-                    cout << "  - " << item.getName() << " x " << item.getQuantity() 
-                         << " (Rp" << fixed << setprecision(2) << item.getPrice() << ")\n";
+                    double itemSubtotal = item.getPrice() * item.getQuantity();
+                    calculatedTotal += itemSubtotal;
+                    
+                    cout << setw(35) << left << ("  - " + item.getName()) 
+                         << setw(10) << item.getQuantity()
+                         << setw(15) << fixed << setprecision(2) << itemSubtotal << "\n";
                 }
-                cout << "\n";
             }
         }
 
@@ -376,6 +418,36 @@ void Buyer::viewMyOrderHistory() const {
         }
         cout << "\n";
     } catch (...) {
-        cerr << "\n[ERROR] Failed to load order history. Check the implementation of loadAllOrders().\n";
+        cerr << "\nFailed to load order history. Check the implementation of loadOrders().\n";
     }
+}
+
+void Buyer::handleSpendingReport() {
+    cout << "\n--- SPENDING REPORT PERIOD ---\n";
+    cout << "1. Today (Last 1 Day)\n";
+    cout << "2. Last 7 Days (A Week)\n";
+    cout << "3. Last 30 Days (A Month)\n";
+    cout << "4. Back\n";
+    cout << "Select period: ";
+    
+    int periodChoice;
+    if (!(cin >> periodChoice)) return;
+
+    int days = 0;
+    if (periodChoice == 1) {
+        days = 1;
+    } else if (periodChoice == 2) {
+        days = 7;
+    } else if (periodChoice == 3) {
+        days = 30;
+    } else {
+        return;
+    }
+    
+    double spending = calculateSpendingLastKDays(days);
+    
+    cout << "\n--- SPENDING REPORT: Last " << days << " Days ---\n";
+    cout << "Total Spending: Rp" 
+         << fixed << setprecision(2) 
+         << spending << "\n\n";
 }

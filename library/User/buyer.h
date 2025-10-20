@@ -61,6 +61,8 @@ public:
     void deposit(double amount);
 
     void viewMyOrderHistory() const;
+    double calculateSpendingLastKDays(int days) const;
+    void handleSpendingReport();
 };
 
 #endif // BUYER_H
