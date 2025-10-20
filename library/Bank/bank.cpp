@@ -197,7 +197,7 @@ void Bank::handleAdminMenu() {
                 this->listRecentTransactions(7); 
                 break;
             case 2: 
-                this->listAccounts(); // Reuses existing listAccounts
+                this->listAccounts(); 
                 break;
             case 3: 
                 this->listDormantAccounts(); 

@@ -224,7 +224,7 @@ map<string, shared_ptr<BankCustomer>> loadBankAccounts() {
         auto tokens = split(line, ',');
         auto account = BankCustomer::fromCSV(tokens); 
         if (account) {
-            bankMap[account->getName()] = account; // Map kunci: Nama Pemilik
+            bankMap[account->getName()] = account;
         }
     }
     ifs.close();
@@ -339,7 +339,6 @@ std::vector<BankTransaction> BankTransaction::loadFromFile(const std::string& fi
     while (std::getline(file, line)) {
         if (line.empty()) continue;
 
-        // Asumsi fungsi split() sudah didefinisikan dan terlihat di scope ini
         std::vector<std::string> tokens = split(line, ',');
         
         if (tokens.size() >= 5) {

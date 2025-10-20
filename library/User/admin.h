@@ -9,7 +9,7 @@ public:
         : User(uname, upass) {}
 
     string getRole() const override { return "Admin"; }
-    bool isAdmin() const override { return true; } // INI KONDISI PENTINGNYA!
+    bool isAdmin() const override { return true; } 
 
     void showAccountInfo() const override {
         cout << "Role: Admin\n";

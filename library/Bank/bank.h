@@ -15,7 +15,7 @@ using namespace std;
 struct TransactionRecord {
     int accountId;
     double amount;
-    string type; // e.g., "Deposit", "Withdrawal"
+    string type;
     chrono::system_clock::time_point transactionTime;
 };
 
