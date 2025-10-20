@@ -12,17 +12,25 @@
 
 using namespace std;
 
-std::string Order::getFormattedCreationTime() const {
-    std::time_t tt = std::chrono::system_clock::to_time_t(creationTime);
-    std::tm tm_local = *std::localtime(&tt);
-    std::stringstream ss;
-    ss << std::put_time(&tm_local, "%Y-%m-%d %H:%M:%S");
+void Order::setTotalAmount(double totalAmount) {
+    this->totalAmount = totalAmount; 
+}
+
+string Order::getFormattedCreationTime() const {
+    time_t tt = chrono::system_clock::to_time_t(creationTime);
+    tm tm_local = *localtime(&tt);
+    stringstream ss;
+    ss << put_time(&tm_local, "%Y-%m-%d %H:%M:%S");
     
     return ss.str();
 }
 
-void Order::setTotalAmount(double totalAmount) {
-    this->totalAmount = totalAmount; 
+string Order::getYearMonthString() const {
+    time_t tt = chrono::system_clock::to_time_t(creationTime);
+    tm tm = *localtime(&tt);
+    stringstream ss;
+    ss << put_time(&tm, "%Y-%m");
+    return ss.str();
 }
 
 void Order::setCreationTime(chrono::system_clock::time_point time) {

@@ -51,6 +51,10 @@ public:
     void handleStoreCapabilitiesMenu();
 
     const string& getStoreName() const { return storeName; }
+    
+    void handleAnalysisFunctionality();
+    void handlePopularItemsReport();
+    void handleLoyalCustomerReport();
 };
 
 #endif // SELLER_H

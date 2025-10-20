@@ -37,6 +37,7 @@ public:
     chrono::system_clock::time_point getCreationTime() const { return creationTime; }
 
     void setCreationTime(chrono::system_clock::time_point time);
+    string getYearMonthString() const;
 
     string getFormattedCreationTime() const;
 

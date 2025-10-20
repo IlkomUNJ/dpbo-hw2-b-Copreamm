@@ -14,6 +14,7 @@
 
 
 extern vector<Order> orders; 
+extern void loadOrders(std::vector<Order>&);
 using namespace std;
 
 Seller::Seller(const string& name, const string& password, const string& storeName)
@@ -181,6 +182,120 @@ void Seller::viewOrders() const {
     }
 }
 
+void Seller::handlePopularItemsReport() {
+    loadOrders(orders);
+    const vector<Order>& allOrders = orders;
+
+    map<string, map<string, int>> monthlyItemSales;
+
+    for (const auto& order : allOrders) {
+        if (order.getStatus() == "DONE" && order.getSellerStoreName() == this->storeName) {
+            string yearMonth = order.getYearMonthString();
+            for (const auto& item : order.getItems()) {
+                monthlyItemSales[yearMonth][item.getName()] += item.getQuantity();
+            }
+        }
+    }
+
+    if (monthlyItemSales.empty()) {
+        cout << "\nNo sales data found for store " << this->storeName << ".\n\n";
+        return;
+    }
+
+    int k;
+    cout << "\n[POPULAR ITEMS REPORT - " << this->storeName << "] Enter the Top K item limit per month (e.g., 5): ";
+    if (!(cin >> k) || k <= 0) {
+        cin.clear(); cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cout << "Invalid input. Using default K=5.\n";
+        k = 5;
+    }
+
+    cout << "\n=== TOP " << k << " POPULAR ITEMS PER MONTH (" << this->storeName << ") ===\n";
+    for (const auto& monthPair : monthlyItemSales) {
+        const string& month = monthPair.first;
+        const auto& itemSales = monthPair.second;
+
+        vector<pair<string, int>> sortedItems;
+        for (const auto& salesPair : itemSales) {
+            sortedItems.push_back({salesPair.first, salesPair.second});
+        }
+
+        sort(sortedItems.begin(), sortedItems.end(),
+            [](const pair<string, int>& a, const pair<string, int>& b) {
+                return a.second > b.second;
+            });
+
+        cout << "\n--- Month: " << month << " ---\n";
+        cout << setw(5) << left << "Rank" << setw(30) << "Item Name" << setw(15) << "Total Quantity" << "\n";
+        cout << "------------------------------------------------\n";
+
+        for (int i = 0; i < min(k, static_cast<int>(sortedItems.size())); ++i) {
+            cout << setw(5) << left << (i + 1)
+                 << setw(30) << sortedItems[i].first
+                 << setw(15) << sortedItems[i].second << "\n";
+        }
+    }
+    cout << "\n\n";
+}
+
+void Seller::handleLoyalCustomerReport() {
+    loadOrders(orders);
+    const vector<Order>& allOrders = orders;
+
+    map<string, map<string, int>> monthlyCustomerLoyalty;
+
+    for (const auto& order : allOrders) {
+        if (order.getStatus() == "DONE" && order.getSellerStoreName() == this->storeName) {
+            string yearMonth = order.getYearMonthString();
+            monthlyCustomerLoyalty[yearMonth][order.getBuyerName()]++;
+        }
+    }
+
+    if (monthlyCustomerLoyalty.empty()) {
+        cout << "\n[LOYAL CUSTOMER REPORT] No 'DONE' sales data found for store " << this->storeName << ".\n\n";
+        return;
+    }
+
+    cout << "\n=== MOST LOYAL CUSTOMERS PER MONTH (" << this->storeName << ") ===\n";
+    cout << "(Based on number of DONE orders)\n";
+
+    for (const auto& monthPair : monthlyCustomerLoyalty) {
+        const string& month = monthPair.first;
+        const auto& customerData = monthPair.second;
+
+        string topCustomerName = "N/A";
+        int maxOrders = 0;
+        vector<string> loyalCustomers;
+
+        for (const auto& customerPair : customerData) {
+            if (customerPair.second > maxOrders) {
+                maxOrders = customerPair.second;
+                loyalCustomers.clear();
+                loyalCustomers.push_back(customerPair.first);
+            } else if (customerPair.second == maxOrders && maxOrders > 0) {
+                loyalCustomers.push_back(customerPair.first);
+            }
+        }
+
+        stringstream loyalList;
+        for (size_t i = 0; i < loyalCustomers.size(); ++i) {
+            loyalList << loyalCustomers[i];
+            if (i < loyalCustomers.size() - 1) {
+                loyalList << ", ";
+            }
+        }
+        topCustomerName = loyalCustomers.empty() ? "N/A" : loyalList.str();
+
+        cout << "\n--- Month: " << month << " ---\n";
+        cout << setw(30) << left << "Most Loyal Customer:" 
+             << topCustomerName << "\n";
+        cout << setw(30) << left << "Number of DONE Orders:" 
+             << maxOrders << "\n";
+    }
+    cout << "\n\n";
+}
+
+
 void Seller::handleStoreCapabilitiesMenu() {
     int choice;
     bool exitMenu = false;
@@ -191,8 +306,10 @@ void Seller::handleStoreCapabilitiesMenu() {
         cout << "2. View Most Frequent Completed Items\n";
         cout << "3. View Recent Transactions\n";
         cout << "4. List All Most Active Buyers\n";
-        cout << "5. List All Most Active Sellers\n"; // Opsi Baru
-        cout << "6. BACK to Main Menu\n";
+        cout << "5. List All Most Active Sellers\n";
+        cout << "6. Discover Top K Most Popular Items \n";
+        cout << "7. Discover Loyal Customer\n";
+        cout << "8. BACK to Main Menu\n";
         cout << "Enter choice: ";
 
         if (!(cin >> choice)) {
@@ -252,6 +369,12 @@ void Seller::handleStoreCapabilitiesMenu() {
                 viewMostActiveSellersPerDay(orders, nSellers, 10);
                 break;
             case 6:
+                handlePopularItemsReport();
+                break;
+            case 7:
+                handleLoyalCustomerReport();
+                break;
+            case 8:
                 cout << "Back to Main Menu. \n\n";
                 return;
             default:
